@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="fr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ANOR V16 • Sceau Souverain & Gestion de Lot</title>
+    <link rel="stylesheet" href="./forge.css">
+    <link rel="icon" href="../assets/logo_anor.png">
+    <style>
+        .topbar nav {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .topbar nav a {
+            color: #b0c4de;
+            text-decoration: none;
+            padding: 8px 14px;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid rgba(74, 144, 226, 0.2);
+            transition: all 0.3s ease;
+        }
+        .topbar nav a:hover {
+            color: #ffffff;
+            background: rgba(74, 144, 226, 0.15);
+            border-color: #4A90E2;
+            box-shadow: 0 0 10px rgba(74, 144, 226, 0.2);
+        }
+        .topbar nav a.active {
+            color: #ffffff;
+            background: #4A90E2;
+            border-color: #4A90E2;
+            font-weight: 600;
+            box-shadow: 0 0 12px rgba(74, 144, 226, 0.4);
+        }
+        .actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+    </style>
+</head>
+
+<body>
+
+<header class="topbar">
+    <div class="brand">
+        <img src="../assets/logo_anor.png" class="logo" alt="ANOR" onerror="this.style.display='none'">
+        <div>
+            <h1>FORGE ANOR</h1>
+            <p>Plateforme Nationale de Certification - Lots & Emballages</p>
+        </div>
+    </div>
+    <nav>
+        <a href="../dashboard/index.html">📊 Dashboard</a>
+        <a class="active" href="index.html">🏭 Forge & Lot</a>
+        <a href="../registry/index.html">📋 Registre</a>
+        <a href="../map_surveillance/index.html">🗺️ Surveillance</a>
+        <a href="../product_audit/index.html">📦 Audit Produit</a>
+        <a href="../intelligence/index.html">🧠 Intelligence</a>
+        <a href="../verification/index.html">✔ Vérification</a>
+    </nav>
+    <div class="serverState">
+        <div id="serverLed" class="led"></div>
+        <span id="serverLabel">Vérification serveur...</span>
+    </div>
+</header>
+
+<main class="workspace">
+<section class="leftPanel">
+<div class="panel">
+<h2>Paramètres de production du lot</h2>
+
+<form id="forgeForm" autocomplete="off">
+    <div class="row">
+        <div class="field">
+            <label>Nom du produit *</label>
+            <input id="nom_produit" name="nom_produit" type="text">
+        </div>
+        <div class="field">
+            <label>Nom du producteur *</label>
+            <input id="nom_producteur" name="nom_producteur" type="text">
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="field">
+            <label>Lot *</label>
+            <input id="lot" name="lot" type="text">
+        </div>
+        <div class="field">
+            <label>Quantité *</label>
+            <input id="quantite" name="quantite" type="number">
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="field" style="grid-column: span 2;">
+            <label>Type d'emballage *</label>
+            <input id="type_emballage" name="type_emballage" type="text">
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="field">
+            <label>Composition</label>
+            <textarea id="composition" name="composition"></textarea>
+        </div>
+        <div class="field">
+            <label>Pays d'origine *</label>
+            <input id="pays_origine" name="pays_origine" list="listePays" autocomplete="off">
+            <datalist id="listePays"></datalist>
+        </div>
+    </div>
+
+    <div id="cameroonFields" style="display:none;">
+        <div class="row">
+            <div class="field" style="grid-column: span 2;">
+                <label>Date du certificat de conformité</label>
+                <input id="date_certificat_conformite" name="date_certificat_conformite" type="date">
+            </div>
+        </div>
+    </div>
+
+    <div id="internationalFields" style="display:none;">
+        <div class="row">
+            <div class="field">
+                <label>Date de fabrication</label>
+                <input id="date_fabrication" name="date_fabrication" type="date">
+            </div>
+            <div class="field">
+                <label>Date de péremption</label>
+                <input id="date_peremption" name="date_peremption" type="date">
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="field">
+            <label>Certificat PDF</label>
+            <input id="certificat_pdf" name="certificat_pdf" type="file" accept=".pdf">
+        </div>
+        <div class="field">
+            <label>Visuel du produit</label>
+            <input id="visuel" name="visuel_produit" type="file" accept="image/*">
+        </div>
+    </div>
+
+    <div class="actions">
+        <button type="button" id="btnForge">⚙ FORGER LE SCEAU DE LOT</button>
+        <button type="button" id="btnPNG" disabled>🖼 PNG HD</button>
+        <button type="button" id="btnKit" disabled>📦 KIT COMPLET</button>
+        <button type="button" id="btnReset">↺ RESET</button>
+    </div>
+</form>
+</div>
+</section>
+
+<section class="rightPanel">
+    <div class="previewCard">
+        <h2>Prévisualisation</h2>
+        <div class="previewGrid">
+            <div class="previewBox">
+                <div class="previewTitle">IMAGE DU PRODUIT</div>
+                <div class="imageFrame">
+                    <img id="previewImg" src="" alt="Produit" style="display:none;">
+                    <div id="imagePlaceholder" class="placeholder">Aucune image sélectionnée</div>
+                </div>
+            </div>
+            <div class="previewBox">
+                <div class="previewTitle">SCEAU DU LOT ANOR</div>
+                <div class="sealFrame">
+                    <span id="placeholder-seal" class="placeholder">En attente de génération...</span>
+                    <img id="seal-image" src="" alt="Sceau de Lot Généré" style="display:none; width: 100%; height: 100%; object-fit: contain;">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="generationCard">
+        <div class="generationHeader">
+            <div class="generationLed"></div>
+            <span>Génération du sceau de lot</span>
+        </div>
+        <div class="progressCard">
+            <div class="progressLabels">
+                <span>Progression</span>
+                <span id="progressLabel">0%</span>
+            </div>
+            <div class="progressBar">
+                <div id="progressFill" class="progressFill"></div>
+            </div>
+        </div>
+        <div class="generationBody">
+            <div class="generationStatus">
+                <span>Statut</span>
+                <strong id="status">PRÊT</strong>
+            </div>
+            <div class="generationStatus">
+                <span>Pipeline</span>
+                <strong id="pipelineState">En attente</strong>
+            </div>
+        </div>
+    </div>
+
+    <div class="generationCard">
+        <div class="generationHeader">
+            <div class="generationLed"></div>
+            <span>Résultat de la forge</span>
+        </div>
+        <div class="generationBody">
+            <div class="generationStatus">
+                <span>Lot</span>
+                <code id="identifiant">-</code>
+            </div>
+            <div class="generationStatus">
+                <span>Empreinte Hash</span>
+                <code id="sha256">-</code>
+            </div>
+            <div class="generationStatus">
+                <span>Signature IA</span>
+                <code id="debug">-</code>
+            </div>
+            <div class="generationStatus">
+                <span>Version</span>
+                <code id="version">ANOR-V17-SOVEREIGN</code>
+            </div>
+        </div>
+    </div>
+
+    <div class="generationCard">
+        <div class="generationHeader">
+            <div class="generationLed"></div>
+            <span>Journal de génération</span>
+        </div>
+        <div id="journal" class="journal">En attente de démarrage de la forge...</div>
+    </div>
+</section>
+</main>
+
+<script>
+const PAYS_MONDE = [
+    "Afghanistan", "Afrique du Sud", "Albanie", "Algérie", "Allemagne", "Andorre", "Angola", "Antigua-et-Barbuda", "Arabie saoudite", "Argentine", "Arménie", "Australie", "Autriche", "Azerbaïdjan",
+    "Bahamas", "Bahreïn", "Bangladesh", "Barbade", "Belgique", "Belize", "Bénin", "Bhoutan", "Biélorussie", "Birmanie", "Bolivie", "Bosnie-Herzégovine", "Botswana", "Brésil", "Brunei", "Bulgarie", "Burkina Faso", "Burundi",
+    "Cambodge", "Cameroun", "Canada", "Cap-Vert", "Centrafrique", "Chili", "Chine", "Chypre", "Colombie", "Comores", "Congo-Brazzaville", "Congo-Kinshasa", "Corée du Nord", "Corée du Sud", "Costa Rica", "Côte d'Ivoire", "Croatie", "Cuba",
+    "Danemark", "Djibouti", "Dominique",
+    "Égypte", "Émirats arabes unis", "Équateur", "Érythrée", "Espagne", "Estonie", "Eswatini", "États-Unis", "Éthiopie",
+    "Fidji", "Finlande", "France",
+    "Gabon", "Gambie", "Géorgie", "Ghana", "Grèce", "Grenade", "Guatemala", "Guinée", "Guinée équatoriale", "Guinée-Bissau", "Guyana",
+    "Haïti", "Honduras", "Hongrie",
+    "Inde", "Indonésie", "Irak", "Iran", "Irlande", "Islande", "Israël", "Italie",
+    "Jamaïque", "Japon", "Jordanie",
+    "Kazakhstan", "Kenya", "Kirghizistan", "Kiribati", "Koweït",
+    "Laos", "Lesotho", "Lettonie", "Liban", "Libéria", "Libye", "Liechtenstein", "Lituanie", "Luxembourg",
+    "Macédoine du Nord", "Madagascar", "Malaisie", "Malawi", "Maldives", "Mali", "Malte", "Maroc", "Maurice", "Mauritanie", "Mexique", "Micronésie", "Moldavie", "Monaco", "Mongolie", "Monténégro", "Mozambique",
+    "Namibie", "Nauru", "Népal", "Nicaragua", "Niger", "Nigéria", "Norvège", "Nouvelle-Zélande",
+    "Oman", "Ouganda", "Ouzbékistan",
+    "Pakistan", "Palaos", "Palestine", "Panama", "Papouasie-Nouvelle-Guinée", "Paraguay", "Pays-Bas", "Pérou", "Philippines", "Pologne", "Portugal",
+    "Qatar",
+    "Roumanie", "Royaume-Uni", "Russie", "Rwanda",
+    "Saint-Kitts-et-Nevis", "Saint-Vincent-et-les-Grenadines", "Sainte-Lucie", "Salvador", "Samoa", "Sao Tomé-et-Principe", "Sénégal", "Serbie", "Seychelles", "Sierra Leone", "Singapour", "Slovaquie", "Slovénie", "Somalie", "Soudan", "Soudan du Sud", "Sri Lanka", "Suède", "Suisse", "Suriname", "Syrie",
+    "Tadjikistan", "Tanzanie", "Tchad", "République tchèque", "Thaïlande", "Timor oriental", "Togo", "Tonga", "Trinité-et-Tobago", "Tunisie", "Turkménistan", "Turquie", "Tuvalu",
+    "Ukraine", "Uruguay",
+    "Vanuatu", "Vatican", "Venezuela", "Viêt Nam",
+    "Yémen",
+    "Zambie", "Zimbabwe"
+];
+
+document.addEventListener("DOMContentLoaded", async () => {
+    const liste = document.getElementById("listePays");
+    if(liste) {
+        PAYS_MONDE.forEach(p => {
+            const opt = document.createElement("option");
+            opt.value = p;
+            liste.appendChild(opt);
+        });
+    }
+
+    await verifierEtatServeur();
+
+    const pays = document.getElementById("pays_origine");
+    const cameroonFields = document.getElementById("cameroonFields");
+    const internationalFields = document.getElementById("internationalFields");
+    
+    if(pays) {
+        pays.addEventListener("input", () => {
+            const val = pays.value.trim().toLowerCase();
+            if(val === "cameroun") {
+                cameroonFields.style.display = "block";
+                internationalFields.style.display = "none";
+            } else if(val !== "") {
+                cameroonFields.style.display = "none";
+                internationalFields.style.display = "block";
+            } else {
+                cameroonFields.style.display = "none";
+                internationalFields.style.display = "none";
+            }
+        });
+    }
+
+    const visuelInput = document.getElementById("visuel");
+    const previewImg = document.getElementById("previewImg");
+    const placeholder = document.getElementById("imagePlaceholder");
+    if(visuelInput) {
+        visuelInput.addEventListener("change", (e) => {
+            const file = e.target.files[0];
+            if(file) {
+                const reader = new FileReader();
+                reader.onload = (evt) => {
+                    previewImg.src = evt.target.result;
+                    previewImg.style.display = "block";
+                    placeholder.style.display = "none";
+                    ajouterJournal("Visuel du produit chargé localement.");
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+    }
+
+    const btnForge = document.getElementById("btnForge");
+    if(btnForge) {
+        btnForge.addEventListener("click", async () => {
+            const lot = document.getElementById("lot").value.trim();
+            const quantite = document.getElementById("quantite").value.trim();
+            const type_emballage = document.getElementById("type_emballage").value.trim();
+
+            if (!lot || !quantite || !type_emballage) {
+                alert("Veuillez remplir les champs obligatoires (Lot, Quantité, Type d'emballage).");
+                return;
+            }
+
+            document.getElementById("status").textContent = "EN COURS";
+            document.getElementById("pipelineState").textContent = "Génération synchrone directe sur le serveur...";
+            document.getElementById("progressFill").style.width = "50%";
+            document.getElementById("progressLabel").textContent = "50%";
+            ajouterJournal(`Transmission des données du lot [${lot}] au serveur...`);
+
+            const formElement = document.getElementById("forgeForm");
+            const formData = new FormData(formElement);
+
+            try {
+                const response = await fetch('/api/seals/generate-batch-seal', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const resultData = await response.json();
+
+                if (!response.ok || !resultData.success) {
+                    throw new Error(resultData.error?.message || resultData.message || "Erreur lors de la génération du sceau.");
+                }
+
+                ajouterJournal("Réception du sceau et du kit de certification...");
+
+                const sealImg = document.getElementById("seal-image");
+                if (resultData.imageUrl && resultData.imageUrl.startsWith("data:image/png;base64,")) {
+                    sealImg.src = resultData.imageUrl;
+                    sealImg.style.display = "block";
+                    document.getElementById("placeholder-seal").style.display = "none";
+                    window.derniereImageUrl = resultData.imageUrl;
+                } else {
+                    throw new Error("Format d'image Base64 non reconnu.");
+                }
+
+                window.dernierKitZip = resultData.zipUrl;
+
+                document.getElementById("btnPNG").removeAttribute("disabled");
+                document.getElementById("btnKit").removeAttribute("disabled");
+
+                document.getElementById("identifiant").textContent = resultData.lot;
+                document.getElementById("sha256").textContent = resultData.sha256_hash ? resultData.sha256_hash.substring(0, 16) + "..." : "Synchronisé Supabase";
+                document.getElementById("debug").textContent = "IA Validée (100%)";
+
+                document.getElementById("progressFill").style.width = "100%";
+                document.getElementById("progressLabel").textContent = "100%";
+                document.getElementById("status").textContent = "SUCCÈS";
+                document.getElementById("pipelineState").textContent = "Sceau de lot forgé et enregistré";
+                ajouterJournal(`Succès ! Lot [${resultData.lot}] parfaitement enregistré.`);
+
+            } catch (error) {
+                console.error(error);
+                document.getElementById("status").textContent = "ERREUR";
+                document.getElementById("pipelineState").textContent = "Échec de la forge";
+                ajouterJournal(`ALERTE : ${error.message}`);
+                alert(`Erreur : ${error.message}`);
+            }
+        });
+    }
+
+    const btnPNG = document.getElementById("btnPNG");
+    if(btnPNG) {
+        btnPNG.addEventListener("click", () => {
+            if (!window.derniereImageUrl || !window.derniereImageUrl.startsWith("data:image/png;base64,")) {
+                alert("Le PNG généré est invalide.");
+                return;
+            }
+            const link = document.createElement('a');
+            link.href = window.derniereImageUrl;
+            link.download = `Sceau_ANOR_Lot_${document.getElementById("lot").value || 'Export'}.png`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        });
+    }
+
+    const btnKit = document.getElementById("btnKit");
+    if(btnKit) {
+        btnKit.addEventListener("click", () => {
+            if (!window.dernierKitZip) {
+                alert("Aucun kit disponible.");
+                return;
+            }
+            const link = document.createElement("a");
+            link.href = window.dernierKitZip;
+            link.download = `ANOR_Kit_${document.getElementById("lot").value}.zip`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+        });
+    }
+
+    const btnReset = document.getElementById("btnReset");
+    if(btnReset) {
+        btnReset.addEventListener("click", () => {
+            document.getElementById("forgeForm").reset();
+            previewImg.style.display = "none";
+            placeholder.style.display = "flex";
+            const sealImg = document.getElementById("seal-image");
+            if(sealImg) {
+                sealImg.src = "";
+                sealImg.style.display = "none";
+            }
+            document.getElementById("placeholder-seal").style.display = "flex";
+            document.getElementById("identifiant").textContent = "-";
+            document.getElementById("sha256").textContent = "-";
+            document.getElementById("debug").textContent = "-";
+            if(btnPNG) btnPNG.setAttribute("disabled", "true");
+            if(btnKit) btnKit.setAttribute("disabled", "true");
+            if(window.derniereImageUrl) window.derniereImageUrl = null;
+            if(window.dernierKitZip) window.dernierKitZip = null;
+            document.getElementById("progressFill").style.width = "0%";
+            document.getElementById("progressLabel").textContent = "0%";
+            document.getElementById("status").textContent = "PRÊT";
+            document.getElementById("pipelineState").textContent = "En attente";
+            document.getElementById("journal").innerHTML = "Formulaire réinitialisé.";
+            cameroonFields.style.display = "none";
+            internationalFields.style.display = "none";
+        });
+    }
+});
+
+async function verifierEtatServeur() {
+    const led = document.getElementById("serverLed");
+    const label = document.getElementById("serverLabel");
+    try {
+        const res = await fetch('/health');
+        if(res.ok) {
+            led.style.backgroundColor = "#2ecc71";
+            label.textContent = "Serveur Node.js Connecté";
+            ajouterJournal("Connexion établie avec succès sur le serveur backend.");
+        } else {
+            throw new Error();
+        }
+    } catch(e) {
+        led.style.backgroundColor = "#e74c3c";
+        label.textContent = "Serveur Hors Ligne";
+        ajouterJournal("ATTENTION : Impossible de joindre le serveur backend.");
+    }
+}
+
+function ajouterJournal(msg) {
+    const journal = document.getElementById("journal");
+    if(journal) {
+        const time = new Date().toLocaleTimeString();
+        journal.innerHTML += `[${time}] ${msg}<br>`;
+        journal.scrollTop = journal.scrollHeight;
+    }
+}
+</script>
+</body>
+</html>

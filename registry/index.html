@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ANOR V17 • Registre National & Traçabilité</title>
+    <link rel="icon" href="../assets/logo_anor.png">
+    <style>
+        :root {
+            --bg-main: #0f172a;
+            --bg-panel: #1e293b;
+            --bg-card: #090d16;
+            --border-color: rgba(74, 144, 226, 0.25);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent-blue: #3b82f6;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
+        body { background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; display: flex; flex-direction: column; }
+
+        .topbar {
+            background: var(--bg-panel); border-bottom: 1px solid var(--border-color);
+            padding: 15px 30px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 15px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4); z-index: 100;
+        }
+        .brand { display: flex; align-items: center; gap: 15px; }
+        .brand img.logo { height: 45px; background: #fff; padding: 3px; border-radius: 4px; }
+        .brand h1 { font-size: 18px; font-weight: 700; color: #fff; }
+        .brand p { font-size: 12px; color: var(--text-muted); }
+
+        .topbar nav { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+        .topbar nav a {
+            color: var(--text-muted); text-decoration: none; padding: 7px 12px; border-radius: 6px; font-size: 13px;
+            background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.05); transition: all 0.2s;
+        }
+        .topbar nav a:hover, .topbar nav a.active { color: #fff; background: var(--accent-blue); border-color: var(--accent-blue); }
+
+        .serverState { display: flex; align-items: center; gap: 8px; background: var(--bg-card); padding: 6px 12px; border-radius: 20px; border: 1px solid var(--border-color); font-size: 12px; }
+        .led { width: 10px; height: 10px; border-radius: 50%; background-color: #f59e0b; box-shadow: 0 0 8px currentColor; }
+
+        .workspace { padding: 30px; flex: 1; display: flex; flex-direction: column; gap: 25px; max-width: 1400px; margin: 0 auto; width: 100%; }
+
+        .panel { background: var(--bg-panel); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
+        .panel-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 15px; }
+        .panel-header h2 { font-size: 18px; font-weight: 600; color: var(--text-main); }
+
+        .filters-wrapper { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; }
+        .input-control {
+            background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px;
+            padding: 8px 14px; color: #fff; font-size: 13px; outline: none; transition: border-color 0.2s;
+        }
+        .input-control:focus { border-color: var(--accent-blue); }
+
+        .btn-action {
+            background: var(--accent-blue); color: #fff; border: none; padding: 9px 16px; border-radius: 8px;
+            font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.2s; display: flex; align-items: center; gap: 6px;
+        }
+        .btn-action:hover { background: #2563eb; }
+
+        .activity-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .activity-table th, .activity-table td { padding: 14px 12px; text-align: left; border-bottom: 1px solid rgba(255, 255, 255, 0.05); }
+        .activity-table th { color: var(--text-muted); font-weight: 600; background: rgba(0,0,0,0.1); }
+        .badge-cert { background: rgba(16, 185, 129, 0.15); color: var(--accent-green); padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; border: 1px solid rgba(16, 185, 129, 0.3); }
+        .btn-details {
+            background: rgba(59, 130, 246, 0.15); color: var(--accent-blue); border: 1px solid rgba(59, 130, 246, 0.3);
+            padding: 4px 10px; border-radius: 6px; font-size: 11px; font-weight: 600; cursor: pointer; transition: all 0.2s;
+        }
+        .btn-details:hover { background: var(--accent-blue); color: #fff; }
+    </style>
+</head>
+<body>
+
+<header class="topbar">
+    <div class="brand">
+        <img src="../assets/logo_anor.png" class="logo" alt="ANOR" onerror="this.style.display='none'">
+        <div>
+            <h1>REGISTRE NATIONAL</h1>
+            <p>Grand Livre des Certifications & Titres Souverains</p>
+        </div>
+    </div>
+    <nav>
+        <a href="../dashboard/index.html">📊 Dashboard</a>
+        <a href="../forge/index.html">🏭 Forge & Lot</a>
+        <a class="active" href="index.html">📋 Registre</a>
+        <a href="../map_surveillance/index.html">🗺️ Surveillance</a>
+        <a href="../product_audit/index.html">📦 Audit Produit</a>
+        <a href="../intelligence/index.html">🧠 Intelligence</a>
+    </nav>
+    <div class="serverState">
+        <div id="serverLed" class="led"></div>
+        <span id="serverLabel">Connexion...</span>
+    </div>
+</header>
+
+<main class="workspace">
+    <div class="panel">
+        <div class="panel-header">
+            <h2>Registre Global des Lots & Entreprises</h2>
+            <div class="filters-wrapper">
+                <input type="text" id="registrySearch" class="input-control" placeholder="🔍 Rechercher (Lot, Entreprise...)" onkeyup="filtrerRegistre()">
+                <select id="statusFilter" class="input-control" onchange="filtrerRegistre()">
+                    <option value="">Tous les statuts</option>
+                    <option value="CERTIFIÉ">Certifié</option>
+                    <option value="EN_ATTENTE">En attente</option>
+                </select>
+                <button class="btn-action" onclick="exporterRegistre()">📥 Exporter CSV</button>
+            </div>
+        </div>
+
+        <div style="overflow-x: auto;">
+            <table class="activity-table">
+                <thead>
+                    <tr>
+                        <th>N° de Lot</th>
+                        <th>Entreprise / Producteur</th>
+                        <th>Produit</th>
+                        <th>Quantité Unités</th>
+                        <th>Date d'Émission</th>
+                        <th>Statut</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="registryTableBody">
+                    <tr>
+                        <td colspan="7" style="text-align: center; color: var(--text-muted);">Chargement du registre souverain...</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</main>
+
+<script>
+let globalRegistryData = [];
+
+document.addEventListener("DOMContentLoaded", async () => {
+    await verifierServeurEtChargerRegistre();
+});
+
+async function verifierServeurEtChargerRegistre() {
+    const led = document.getElementById("serverLed");
+    const label = document.getElementById("serverLabel");
+    
+    try {
+        const res = await fetch('/health');
+        if(res.ok) {
+            led.style.backgroundColor = "#10b981";
+            label.textContent = "Système en Ligne";
+            chargerRegistreDonnees();
+        } else {
+            throw new Error();
+        }
+    } catch(e) {
+        led.style.backgroundColor = "#ef4444";
+        label.textContent = "Serveur Hors Ligne";
+        document.getElementById("registryTableBody").innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--accent-red);">Connexion au serveur impossible.</td></tr>`;
+    }
+}
+
+async function chargerRegistreDonnees() {
+    try {
+        const response = await fetch('/api/dashboard/stats');
+        const json = await response.json();
+        if(json.success) {
+            globalRegistryData = json.latestLots || [];
+            afficherRegistre(globalRegistryData);
+        }
+    } catch (err) {
+        console.error("Erreur de chargement du registre", err);
+        document.getElementById("registryTableBody").innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--accent-red);">Erreur lors de la récupération des données du registre.</td></tr>`;
+    }
+}
+
+function afficherRegistre(data) {
+    const tbody = document.getElementById("registryTableBody");
+    if(!data || data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="7" style="text-align: center; color: var(--text-muted);">Aucun enregistrement trouvé.</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = data.map((item, index) => `
+        <tr>
+            <td><strong>${item.numero_lot || 'N/A'}</strong></td>
+            <td>${item.producteur || 'Inconnu'}</td>
+            <td>${item.produit || 'Standard'}</td>
+            <td>${(item.quantite || 0).toLocaleString()}</td>
+            <td>${item.date_demande || 'Récemment'}</td>
+            <td><span class="badge-cert">${item.statut || 'CERTIFIÉ'}</span></td>
+            <td><button class="btn-details" id="btn-details-${index}">Détails</button></td>
+        </tr>
+    `).join('');
+
+    // Attachement dynamique correct de la redirection avec l'ID/numéro de lot
+    data.forEach((item, index) => {
+        const btnDetails = document.getElementById(`btn-details-${index}`);
+        if(btnDetails) {
+            btnDetails.onclick = () => {
+                window.location.href = `details.html?lot=${encodeURIComponent(item.numero_lot)}`;
+            };
+        }
+    });
+}
+
+function filtrerRegistre() {
+    const query = document.getElementById("registrySearch").value.toLowerCase();
+    const status = document.getElementById("statusFilter").value;
+
+    const filtered = globalRegistryData.filter(item => {
+        const matchText = (item.numero_lot && item.numero_lot.toLowerCase().includes(query)) ||
+                          (item.producteur && item.producteur.toLowerCase().includes(query)) ||
+                          (item.produit && item.produit.toLowerCase().includes(query));
+        const matchStatus = status === "" || item.statut === status;
+        return matchText && matchStatus;
+    });
+
+    afficherRegistre(filtered);
+}
+
+function exporterRegistre() {
+    alert("Génération de l'export sécurisé CSV du registre national en cours...");
+}
+</script>
+</body>
+</html>

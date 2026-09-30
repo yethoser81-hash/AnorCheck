@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ANOR - Audit et Vérification des Produits</title>
+    <!-- FontAwesome pour les icônes -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-main: #020617;
+            --bg-card: #0f172a;
+            --border-color: #1e293b;
+            --emerald-primary: #10b981;
+            --emerald-hover: #059669;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        body {
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+        }
+
+        header {
+            background-color: var(--bg-card);
+            border-bottom: 1px solid var(--border-color);
+            position: sticky;
+            top: 0;
+            z-index: 50;
+        }
+
+        .header-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .main-container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 2.5rem 1rem;
+        }
+
+        .card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            border-radius: 1rem;
+            padding: 1.5rem;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+            margin-bottom: 2rem;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 0.75rem 1rem 0.75rem 2.75rem;
+            background-color: var(--bg-main);
+            border: 1px solid var(--border-color);
+            border-radius: 0.75rem;
+            color: var(--text-main);
+            outline: none;
+            transition: border-color 0.2s;
+            box-sizing: border-box;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--emerald-primary);
+        }
+
+        button[type="submit"] {
+            background-color: var(--emerald-primary);
+            color: white;
+            font-weight: 600;
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.75rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.55rem;
+            width: 100%;
+        }
+
+        @media (min-width: 768px) {
+            button[type="submit"] {
+                width: auto;
+            }
+        }
+
+        button[type="submit"]:hover {
+            background-color: var(--emerald-hover);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        @keyframes spin { 
+            0% { transform: rotate(0deg); } 
+            100% { transform: rotate(360deg); } 
+        }
+    </style>
+</head>
+<body>
+
+    <!-- En-tête Institutionnel avec tous les liens de navigation -->
+    <header>
+        <div class="header-container">
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+                <div style="background: #059669; padding: 0.5rem; border-radius: 0.5rem; color: white;">
+                    <i class="fa-solid fa-shield-halved" style="font-size: 1.25rem;"></i>
+                </div>
+                <div>
+                    <h1 style="font-size: 1rem; font-weight: bold; text-transform: uppercase; margin: 0; color: #34d399;">ANOR - Système Souverain</h1>
+                    <p style="font-size: 0.75rem; color: #94a3b8; margin: 0;">Module d'Audit et de Traçabilité des Produits</p>
+                </div>
+            </div>
+            <nav style="display: flex; gap: 1.25rem; font-size: 0.875rem; align-items: center;">
+                <a href="/dashboard/index.html" style="color: #cbd5e1; text-decoration: none;">Tableau de bord</a>
+                <a href="/product_audit/index.html" style="color: #34d399; text-decoration: none; font-weight: 600;">Audit Produit</a>
+                <a href="/intelligence/index.html" style="color: #cbd5e1; text-decoration: none;">Intelligence</a>
+                <a href="/surveillance/index.html" style="color: #cbd5e1; text-decoration: none;">Surveillance</a>
+                <a href="/forge/index.html" style="color: #cbd5e1; text-decoration: none;">Forge</a>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Contenu Principal -->
+    <main class="main-container">
+        
+        <div style="text-align: center; margin-bottom: 2.5rem;">
+            <h2 style="font-size: 1.875rem; font-weight: 800; margin-bottom: 0.5rem;">Vérification et Audit de Lot</h2>
+            <p style="color: #94a3b8; font-size: 0.875rem; max-width: 36rem; margin: 0 auto;">
+                Saisissez un numéro de lot ou scannez un sceau numérique ANOR pour authentifier instantanément la conformité du produit.
+            </p>
+        </div>
+
+        <!-- Formulaire de Recherche / Audit -->
+        <div class="card">
+            <form id="auditForm" style="display: flex; flex-direction: column; gap: 1rem;">
+                <div style="flex: 1;">
+                    <label for="lotInput" style="display: block; font-size: 0.75rem; font-weight: 600; text-transform: uppercase; color: #94a3b8; margin-bottom: 0.5rem;">Numéro de Lot ou Code de Sceau</label>
+                    <div style="position: relative;">
+                        <span style="position: absolute; top: 0; bottom: 0; left: 0; padding-left: 1rem; display: flex; align-items: center; pointer-events: none; color: #64748b;">
+                            <i class="fa-solid fa-barcode"></i>
+                        </span>
+                        <input type="text" id="lotInput" required placeholder="Ex: LOT-2026-001 ou code de lot...">
+                    </div>
+                </div>
+                <div style="display: flex; align-items: flex-end;">
+                    <button type="submit" id="submitBtn">
+                        <i class="fa-solid fa-magnifying-glass"></i>
+                        <span>Lancer l'Audit</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- Indicateur de Chargement -->
+        <div id="loader" class="hidden" style="text-align: center; padding: 3rem 0;">
+            <div style="display: inline-block; width: 2.5rem; height: 2.5rem; border: 4px solid #10b981; border-top-color: transparent; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+            <p style="color: #94a3b8; font-size: 0.875rem; margin-top: 1rem;">Interrogation des registres souverains ANOR...</p>
+        </div>
+
+        <!-- Zone de Résultat -->
+        <div id="resultContainer" class="hidden card">
+            <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #1e293b; padding-bottom: 1.5rem; margin-bottom: 1.5rem;">
+                <div style="display: flex; align-items: center; gap: 1rem;">
+                    <div id="statusIconBg" style="padding: 0.75rem; border-radius: 50%; background: rgba(16, 185, 129, 0.1); color: #34d399;">
+                        <i id="statusIcon" class="fa-solid fa-circle-check" style="font-size: 1.5rem;"></i>
+                    </div>
+                    <div>
+                        <span id="badgeStatus" style="display: inline-block; padding: 0.25rem 0.75rem; border-radius: 9999px; font-size: 0.75rem; font-weight: bold; background: rgba(16, 185, 129, 0.2); color: #34d399; text-transform: uppercase; margin-bottom: 0.25rem;">Authentique & Conforme</span>
+                        <h3 id="resProductName" style="font-size: 1.25rem; font-weight: bold; margin: 0;">Nom du Produit</h3>
+                    </div>
+                </div>
+                <div style="text-align: right;">
+                    <span style="font-size: 0.75rem; color: #94a3b8; display: block;">Indice de Confiance</span>
+                    <span id="resConfidence" style="font-size: 1.125rem; font-weight: bold; color: #34d399;">100%</span>
+                </div>
+            </div>
+
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem; font-size: 0.875rem;">
+                <div style="background: #020617; padding: 1rem; border-radius: 0.75rem; border: 1px solid #1e293b; display: flex; flex-direction: column; gap: 0.75rem;">
+                    <div style="display: flex; justify-content: space-between;"><span style="color: #94a3b8;">Numéro de Lot :</span> <strong id="resLot" style="color: white;">---</strong></div>
+                    <div style="display: flex; justify-content: space-between;"><span style="color: #94a3b8;">Producteur Agréé :</span> <strong id="resProducer" style="color: white;">---</strong></div>
+                    <div style="display: flex; justify-content: space-between;"><span style="color: #94a3b8;">Pays d'Origine :</span> <strong id="resCountry" style="color: white;">---</strong></div>
+                    <div style="display: flex; justify-content: space-between;"><span style="color: #94a3b8;">Type d'Emballage :</span> <strong id="resPackaging" style="color: white;">---</strong></div>
+                </div>
+                <div style="background: #020617; padding: 1rem; border-radius: 0.75rem; border: 1px solid #1e293b; display: flex; flex-direction: column; gap: 0.75rem;">
+                    <div style="display: flex; justify-content: space-between;"><span style="color: #94a3b8;">Quantité Certifiée :</span> <strong id="resQuantity" style="color: white;">---</strong></div>
+                    <div style="display: flex; justify-content: space-between;"><span style="color: #94a3b8;">Nombre de Scans :</span> <strong id="resScanCount" style="color: white;">---</strong></div>
+                    <div style="display: flex; justify-content: space-between;"><span style="color: #94a3b8;">Date de Certification :</span> <strong id="resDate" style="color: white;">---</strong></div>
+                    <div style="display: flex; justify-content: space-between;"><span style="color: #94a3b8;">Version Moteur :</span> <strong id="resEngine" style="color: white;">ANOR v17.9</strong></div>
+                </div>
+            </div>
+
+            <div id="pdfContainer" class="hidden" style="margin-top: 1.5rem;">
+                <a id="resPdfLink" href="#" target="_blank" style="display: inline-flex; align-items: center; gap: 0.5rem; color: #34d399; text-decoration: none; font-weight: 600; font-size: 0.875rem;">
+                    <i class="fa-solid fa-file-pdf"></i>
+                    <span>Télécharger le certificat de conformité officiel (PDF)</span>
+                </a>
+            </div>
+        </div>
+
+        <!-- Zone d'Erreur -->
+        <div id="errorContainer" class="hidden" style="background: rgba(159, 18, 57, 0.2); border: 1px solid rgba(159, 18, 57, 0.5); border-radius: 1rem; padding: 1.5rem; text-align: center;">
+            <div style="color: #f43f5e; font-size: 1.875rem; margin-bottom: 0.5rem;">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+            </div>
+            <h3 style="font-size: 1.125rem; font-weight: bold; color: #fb7185; margin: 0 0 0.25rem 0;">Sceau non reconnu ou contrefaçon détectée</h3>
+            <p id="errorMessage" style="font-size: 0.875rem; color: #94a3b8; margin: 0;">Le lot recherché n'existe pas dans la base souveraine ANOR.</p>
+        </div>
+
+    </main>
+
+    <!-- Script de gestion des requêtes API -->
+    <script>
+        document.getElementById('auditForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            const lotVal = document.getElementById('lotInput').value.trim();
+            if (!lotVal) return;
+
+            const loader = document.getElementById('loader');
+            const resultContainer = document.getElementById('resultContainer');
+            const errorContainer = document.getElementById('errorContainer');
+
+            loader.classList.remove('hidden');
+            resultContainer.classList.add('hidden');
+            errorContainer.classList.add('hidden');
+
+            try {
+                const response = await fetch('/api/seals/verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ lot: lotVal })
+                });
+
+                const data = await response.json();
+                loader.classList.add('hidden');
+
+                if (data.success && data.verified) {
+                    document.getElementById('resProductName').textContent = data.nom_produit || "Produit Certifié";
+                    document.getElementById('resLot').textContent = data.lot || lotVal;
+                    document.getElementById('resProducer').textContent = data.nom_producteur || "N/A";
+                    document.getElementById('resCountry').textContent = data.pays_origine || "Cameroun";
+                    document.getElementById('resPackaging').textContent = data.type_emballage || "N/A";
+                    document.getElementById('resQuantity').textContent = data.quantite ? Number(data.quantite).toLocaleString('fr-FR') : "N/A";
+                    document.getElementById('resScanCount').textContent = data.scan_count || "1";
+                    document.getElementById('resDate').textContent = data.certified_at ? new Date(data.certified_at).toLocaleDateString('fr-FR') : "Récemment";
+                    document.getElementById('resConfidence').textContent = data.score || "100%";
+
+                    const pdfLinkDiv = document.getElementById('pdfContainer');
+                    const pdfAnchor = document.getElementById('resPdfLink');
+                    if (data.certificat_pdf_url) {
+                        pdfAnchor.href = data.certificat_pdf_url;
+                        pdfLinkDiv.classList.remove('hidden');
+                    } else {
+                        pdfLinkDiv.classList.add('hidden');
+                    }
+
+                    resultContainer.classList.remove('hidden');
+                } else {
+                    document.getElementById('errorMessage').textContent = data.error?.message || "Aucun enregistrement valide trouvé pour ce lot.";
+                    errorContainer.classList.remove('hidden');
+                }
+            } catch (err) {
+                loader.classList.add('hidden');
+                document.getElementById('errorMessage').textContent = "Erreur de communication avec le serveur distant.";
+                errorContainer.classList.remove('hidden');
+            }
+        });
+    </script>
+</body>
+</html>

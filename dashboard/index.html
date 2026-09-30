@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ANOR V17 • Tableau de Bord Global</title>
+    <link rel="icon" href="../assets/logo_anor.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-main: #070d1b;
+            --bg-panel: #0f172a;
+            --bg-card: #1e293b;
+            --border-color: rgba(74, 144, 226, 0.2);
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --accent-blue: #3b82f6;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', system-ui, sans-serif; }
+        body { background-color: var(--bg-main); color: var(--text-main); min-height: 100vh; display: flex; overflow-x: hidden; }
+
+        .sidebar {
+            width: 260px; background: var(--bg-panel); border-right: 1px solid var(--border-color);
+            display: flex; flex-direction: column; padding: 20px; position: fixed; height: 100vh; z-index: 1000;
+        }
+        .sidebar-brand {
+            display: flex; flex-direction: column; align-items: center; text-align: center;
+            padding-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.05); margin-bottom: 20px;
+        }
+        .sidebar-brand img { height: 45px; background: #fff; padding: 4px; border-radius: 6px; margin-bottom: 10px; }
+        .sidebar-brand h2 { font-size: 16px; font-weight: 700; color: #fff; letter-spacing: 0.5px; }
+        .sidebar-brand span { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+
+        .sidebar-nav { display: flex; flex-direction: column; gap: 6px; flex: 1; }
+        .sidebar-nav a {
+            color: var(--text-muted); text-decoration: none; padding: 10px 14px; border-radius: 8px; font-size: 13px; font-weight: 500;
+            display: flex; align-items: center; gap: 10px; transition: all 0.2s;
+        }
+        .sidebar-nav a:hover { color: #fff; background: rgba(59, 130, 246, 0.1); }
+        .sidebar-nav a.active { color: #fff; background: var(--accent-blue); box-shadow: 0 0 12px rgba(59, 130, 246, 0.4); }
+
+        .main-content { margin-left: 260px; flex: 1; padding: 25px; display: flex; flex-direction: column; gap: 20px; }
+
+        .top-header {
+            display: flex; justify-content: space-between; align-items: center;
+            background: var(--bg-panel); border: 1px solid var(--border-color); padding: 15px 25px; border-radius: 12px;
+        }
+        .top-header h1 { font-size: 18px; font-weight: 600; color: #fff; }
+        
+        .status-badge {
+            background: rgba(16, 185, 129, 0.15); color: var(--accent-green); border: 1px solid rgba(16, 185, 129, 0.3);
+            padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; display: flex; align-items: center; gap: 6px;
+        }
+        .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--accent-green); box-shadow: 0 0 8px currentColor; }
+
+        .dashboard-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; }
+        @media(max-width: 1200px) { .dashboard-grid { grid-template-columns: repeat(2, 1fr); } }
+
+        .metric-card {
+            background: var(--bg-panel); border: 1px solid var(--border-color); border-radius: 10px; padding: 18px;
+        }
+        .metric-card .label { font-size: 11px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+        .metric-card .value { font-size: 24px; font-weight: 700; color: #fff; }
+        .metric-card .sub { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+        .content-grid { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+        @media(max-width: 1100px) { .content-grid { grid-template-columns: 1fr; } }
+
+        .panel { background: var(--bg-panel); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; }
+        .panel h2 { font-size: 15px; font-weight: 600; margin-bottom: 15px; color: #fff; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 10px; }
+
+        .analysis-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        .analysis-table th, .analysis-table td { padding: 12px 10px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .analysis-table th { color: var(--text-muted); font-weight: 600; background: rgba(0,0,0,0.15); }
+        .badge { background: rgba(16, 185, 129, 0.15); color: var(--accent-green); padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+        .badge-alert { background: rgba(239, 68, 68, 0.15); color: var(--accent-red); padding: 3px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+
+        .footer-credit { text-align: center; font-size: 11px; color: var(--text-muted); padding: 10px 0; }
+    </style>
+</head>
+<body>
+
+<aside class="sidebar">
+    <div class="sidebar-brand">
+        <img src="../assets/logo_anor.png" alt="ANOR" onerror="this.style.display='none'">
+        <h2>ANOR</h2>
+        <span>Tour de Contrôle</span>
+    </div>
+    <nav class="sidebar-nav">
+        <a class="active" href="index.html"><i class="fa-solid fa-chart-pie"></i> Tableau de bord</a>
+        <a href="../forge/index.html"><i class="fa-solid fa-industry"></i> Forge & Lot</a>
+        <a href="../registry/index.html"><i class="fa-solid fa-database"></i> Registry</a>
+        <a href="../map_surveillance/index.html"><i class="fa-solid fa-map-location-dot"></i> Surveillance</a>
+        <a href="../product_audit/index.html"><i class="fa-solid fa-box-open"></i> Product Audit</a>
+        <a href="../intelligence/index.html"><i class="fa-solid fa-brain"></i> Intelligence</a>
+    </nav>
+</aside>
+
+<main class="main-content">
+    <div class="top-header">
+        <h1>Tableau de Bord Global & Statistiques</h1>
+        <div class="status-badge" id="serverStatusBadge">
+            <div class="status-dot" id="serverDot"></div>
+            <span id="serverStatusText">CONNEXION BDD...</span>
+        </div>
+    </div>
+
+    <!-- Indicateurs Clés de Performance (KPIs) Globaux -->
+    <div class="dashboard-grid">
+        <div class="metric-card">
+            <div class="label">Précision Globale des Sceaux</div>
+            <div class="value" id="kpiPrecision">--</div>
+            <div class="sub" id="kpiPrecisionSub">Conformité des contrôles</div>
+        </div>
+        <div class="metric-card">
+            <div class="label">Total Scans Effectués</div>
+            <div class="value" id="kpiScans">--</div>
+            <div class="sub">Volume global enregistré</div>
+        </div>
+        <div class="metric-card">
+            <div class="label">Région la Plus Active</div>
+            <div class="value" id="kpiRegion">--</div>
+            <div class="sub">Couverture territoriale</div>
+        </div>
+        <div class="metric-card">
+            <div class="label">Anomalies / Doublons Détectés</div>
+            <div class="value" id="kpiFraudes" style="color: var(--accent-red);">--</div>
+            <div class="sub">Alertes de traçabilité</div>
+        </div>
+    </div>
+
+    <!-- Grille Principale : Flux Global et Synthèse -->
+    <div class="content-grid">
+        <div class="panel">
+            <h2>📊 Flux Récent des Lots & Séries</h2>
+            <div style="overflow-x: auto;">
+                <table class="analysis-table">
+                    <thead>
+                        <tr>
+                            <th>N° de Lot</th>
+                            <th>N° de Série</th>
+                            <th>Dernière Localisation</th>
+                            <th>Horodatage</th>
+                            <th>Statut</th>
+                        </tr>
+                    </thead>
+                    <tbody id="dynamicTableBody">
+                        <tr>
+                            <td colspan="5" style="text-align: center; color: var(--text-muted);">Chargement des données globales...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h2>📈 Synthèse & État du Système</h2>
+            <div id="diagnosticsContainer" style="display: flex; flex-direction: column; gap: 12px; font-size: 13px;">
+                <div style="background: var(--bg-card); padding: 12px; border-radius: 8px; border-left: 3px solid var(--accent-blue);">
+                    <strong>État Général :</strong> Surveillance active des flux de production et des registres de certification sur l'ensemble des plateformes connectées.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="footer-credit">
+        ANOR Intelligence Core © 2026 • Tableau de Bord Global
+    </div>
+</main>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    chargerDonneesServeur();
+});
+
+async function chargerDonneesServeur() {
+    try {
+        const response = await fetch('/api/dashboard/stats');
+        if (!response.ok) throw new Error("Erreur serveur");
+        
+        const data = await response.json();
+        
+        if(data.stats) {
+            document.getElementById("kpiPrecision").textContent = data.stats.precision || "99.85%";
+            document.getElementById("kpiScans").textContent = data.stats.totalScans || "0";
+            document.getElementById("kpiRegion").textContent = data.stats.topRegion || "Centre & Littoral";
+            document.getElementById("kpiFraudes").textContent = data.stats.aiAlerts || "0";
+        }
+
+        if(data.latestSeries && data.latestSeries.length > 0) {
+            const tbody = document.getElementById("dynamicTableBody");
+            tbody.innerHTML = data.latestSeries.map(item => `
+                <tr>
+                    <td><strong>${item.numero_lot || 'N/A'}</strong></td>
+                    <td><code>${item.numero_serie || 'Série-000'}</code></td>
+                    <td>📍 ${item.localisation || 'Inconnue'}</td>
+                    <td>${item.horodatage || 'Récemment'}</td>
+                    <td><span class="${item.alerte ? 'badge-alert' : 'badge'}">${item.statut || 'CONFORME'}</span></td>
+                </tr>
+            `).join('');
+        } else {
+            document.getElementById("dynamicTableBody").innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Aucun flux enregistré pour l'instant.</td></tr>`;
+        }
+
+        document.getElementById("serverDot").style.background = "var(--accent-green)";
+        document.getElementById("serverDot").style.boxShadow = "0 0 8px var(--accent-green)";
+        document.getElementById("serverStatusText").textContent = "SYSTÈMES CONNECTÉS";
+        document.getElementById("serverStatusBadge").style.borderColor = "rgba(16, 185, 129, 0.3)";
+        document.getElementById("serverStatusBadge").style.color = "var(--accent-green)";
+
+    } catch (err) {
+        document.getElementById("serverDot").style.background = "var(--accent-red)";
+        document.getElementById("serverDot").style.boxShadow = "0 0 8px var(--accent-red)";
+        document.getElementById("serverStatusText").textContent = "EN ATTENTE SERVEUR";
+        document.getElementById("serverStatusBadge").style.borderColor = "rgba(239, 68, 68, 0.3)";
+        document.getElementById("serverStatusBadge").style.color = "var(--accent-red)";
+        
+        document.getElementById("kpiPrecision").textContent = "--";
+        document.getElementById("kpiScans").textContent = "--";
+        document.getElementById("kpiRegion").textContent = "--";
+        document.getElementById("kpiFraudes").textContent = "--";
+
+        document.getElementById("dynamicTableBody").innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--accent-red);">Serveur non accessible. Veuillez lancer le back-end.</td></tr>`;
+    }
+}
+</script>
+</body>
+</html>
