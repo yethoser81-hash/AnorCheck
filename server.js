@@ -187,13 +187,15 @@ function securityLog(req, event, details = {}) {
 // ======================================================
 
 const defaultAllowedOrigins = [
+    "https://anorcheck.onrender.com",
+    "https://anor-backend.onrender.com",
     "http://localhost:3000",
     "http://localhost:5173",
     "http://localhost:8080",
+    "http://localhost:5000",
     "http://localhost",
     "https://localhost",
-    "capacitor://localhost",
-    "https://anor-backend.onrender.com"
+    "capacitor://localhost"
 ];
 
 const configuredOrigins = String(
@@ -213,8 +215,8 @@ app.use(
         origin: function (origin, callback) {
             if (!origin) return callback(null, true);
             if (allowedOrigins.includes(origin)) return callback(null, true);
+            if (origin.endsWith(".onrender.com")) return callback(null, true);
             if (!isProduction && isPrivateNetworkOrigin(origin)) return callback(null, true);
-            if (!isProduction) return callback(null, true);
             
             console.warn(`[CORS] Origine refusée par la politique de sécurité: ${origin}`);
             return callback(new Error("CORS_ORIGIN_NOT_ALLOWED"));
