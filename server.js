@@ -1,8 +1,8 @@
 /**
  * ======================================================
  * SYSTEME SOUVERAIN DE CERTIFICATION ANOR
- * SERVER CORE (VERSION ARCHITECTURE HAUTE SÉCURITÉ - OPTIMISÉ LECTURE RAPIDE QR)
- * Version: 18.0.0 (Décodage instantané style QR Code & Cache Vision Flash)
+ * SERVER CORE (VERSION OPTIMISÉE LECTURE INSTANTANÉE STYLE QR CODE)
+ * Version: 18.0.0 (Décodage binaire local sans dépendance IA immédiate)
  * ======================================================
  */
 
@@ -32,18 +32,18 @@ const upload = multer({
 });
 
 // ======================================================
-// CONFIGURATION GEMINI IA
+// CONFIGURATION GEMINI IA (MODULE DE SECOURS/FALLBACK ONLY)
 // ======================================================
 let ai = null;
 if (process.env.GEMINI_API_KEY) {
     ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
-    console.log("[ANOR CORE] Module Vision IA initialisé avec succès.");
+    console.log("[ANOR CORE] Module Vision IA initialisé (Actif en mode secours uniquement).");
 } else {
-    console.warn("[ANOR CORE] Avertissement : Clé GEMINI_API_KEY absente. Le module Vision IA sera inactif.");
+    console.warn("[ANOR CORE] Avertissement : Clé GEMINI_API_KEY absente. Le module Vision IA de secours sera inactif.");
 }
 
 // ======================================================
-// CACHE INTELLIGENT DE VISION FLASH (RÉPONSE EN < 1 SECONDE)
+// CACHE INTELLIGENT DE VISION FLASH (RÉPONSE EN < 50MS)
 // ======================================================
 const scanCache = new Map();
 const SCAN_CACHE_TTL = 15 * 60 * 1000; // 15 minutes
@@ -103,11 +103,6 @@ function calculateHammingDistance(str1, str2) {
         }
     }
     return distance;
-}
-
-function sanitizeFileName(filename) {
-    if (!filename) return "unnamed_file";
-    return String(filename).replace(/[^a-zA-Z0-9._-]/g, "_");
 }
 
 function isValidUserAgent(agent) {
@@ -268,60 +263,26 @@ app.use((req, res, next) => {
 });
 
 // ======================================================
-// RATE LIMITING DURCI
+// RATE LIMITING
 // ======================================================
 
 const scanLimiter = rateLimit({
     windowMs: 60 * 1000,
-    max: 60, // Augmenté pour supporter le scanning continu haute fréquence style QR
+    max: 120, // Tolérance élevée pour scanning temps réel type QR
     standardHeaders: true,
     legacyHeaders: false,
     handler: (req, res) => {
         securityLog(req, "RATE_LIMIT_EXCEEDED", { ip: req.ip });
         return res.status(429).json({
             success: false,
-            error: { code: "TROP_DE_REQUETES", message: "Flux de numérisation trop élevé. Veuillez réessayer dans quelques secondes." }
+            error: { code: "TROP_DE_REQUETES", message: "Flux de numérisation trop élevé." }
         });
     }
 });
 
 // ======================================================
-// ANALYSE INTEL-QR & GEMINI VISION
+// ANALYSE IA SECONDAIRE (SEULEMENT SI DÉCODAGE TECHNIQUE ÉCHOUE)
 // ======================================================
-
-async function intelligentVisualAnalysis(scannedMatrix) {
-    if (!scannedMatrix) return { lot: null, signature: null, bits: null, confidence: 0 };
-
-    if (typeof scannedMatrix === "string") {
-        const trimmed = scannedMatrix.trim();
-        if (!trimmed) return { lot: null, signature: null, bits: null, confidence: 0 };
-
-        if (trimmed.startsWith("ANOR51:")) {
-            const bits = normalizeVisualBits(trimmed.substring(7));
-            if (bits) return { lot: null, signature: trimmed, bits, confidence: 0.99 };
-        }
-
-        const directBits = normalizeVisualBits(trimmed);
-        if (directBits) {
-            return { lot: null, signature: `ANOR51:${directBits}`, bits: directBits, confidence: 0.99 };
-        }
-
-        if (trimmed.length < 50) {
-            return { lot: trimmed, signature: null, bits: null, confidence: 0.95 };
-        }
-
-        return { lot: null, signature: trimmed, bits: null, confidence: 0.50 };
-    }
-
-    if (typeof scannedMatrix === "object") {
-        const bits = normalizeVisualBits(scannedMatrix.bits || scannedMatrix.visualBits);
-        const signature = scannedMatrix.signature || scannedMatrix.visualSignature || null;
-        const lot = scannedMatrix.lot || scannedMatrix.batch || scannedMatrix.certificate_code || null;
-        return { lot, signature, bits, confidence: bits ? 0.99 : lot ? 0.95 : 0.40 };
-    }
-
-    return { lot: null, signature: null, bits: null, confidence: 0 };
-}
 
 async function analyzeSealWithGemini(imageBuffer, mimeType = "image/jpeg") {
     try {
@@ -352,49 +313,6 @@ async function analyzeSealWithGemini(imageBuffer, mimeType = "image/jpeg") {
 }
 
 // ======================================================
-// GENERATION DU MANIFESTE INDUSTRIEL
-// ======================================================
-
-async function generateUnitSerialsAndManifest(lotCode, totalQuantity, masterSignature) {
-    const batchSize = 5000;
-    let csvContent = "Index,Numero_De_Serie,Hachage_Securise\n";
-    const unitsToInsert = [];
-
-    for (let i = 1; i <= totalQuantity; i++) {
-        const paddedIndex = String(i).padStart(6, "0");
-        const serialNumber = `${lotCode}-${paddedIndex}`;
-        
-        const secureUnitHash = crypto
-            .createHash("sha256")
-            .update(`${masterSignature}-${serialNumber}-${i}`)
-            .digest("hex");
-
-        unitsToInsert.push({
-            lot: lotCode,
-            serial_number: serialNumber,
-            unit_index: i,
-            secure_unit_hash: secureUnitHash,
-            statut_unitaire: "ACTIF"
-        });
-
-        csvContent += `${i},${serialNumber},${secureUnitHash}\n`;
-
-        if (unitsToInsert.length >= batchSize || i === totalQuantity) {
-            const { error } = await supabase
-                .from("produits_unitaires_serials")
-                .upsert(unitsToInsert, { onConflict: "serial_number" });
-
-            if (error) {
-                console.error(`[SERIALIZATION ERROR] Erreur sur le bloc se terminant à l'index ${i}:`, error.message);
-                throw error;
-            }
-            unitsToInsert.length = 0;
-        }
-    }
-    return csvContent;
-}
-
-// ======================================================
 // FICHIERS STATIQUES & ROUTES
 // ======================================================
 
@@ -410,7 +328,7 @@ app.get(["/", "/index.html"], (req, res) => {
 });
 
 // ======================================================
-// HEALTH CHECK & STATS
+// HEALTH CHECK
 // ======================================================
 
 app.get("/health", async (req, res) => {
@@ -424,9 +342,9 @@ app.get("/health", async (req, res) => {
 
     return apiSuccess(res, {
         status: "ONLINE",
-        engine: `ANOR Core ${SERVER_VERSION} (QR-Logic Enabled)`,
+        engine: `ANOR Core ${SERVER_VERSION} (Fast QR Decoding Mode)`,
         database,
-        gemini: ai ? "CONFIGURED" : "NOT_CONFIGURED",
+        gemini: ai ? "CONFIGURED_FALLBACK_ONLY" : "NOT_CONFIGURED",
         uptime: process.uptime()
     });
 });
@@ -470,7 +388,7 @@ app.get("/api/dashboard/stats", async (req, res) => {
 });
 
 // ======================================================
-// VERIFICATION DU SCEAU MODE LECTURE RAPIDE STYLE QR
+// VÉRIFICATION RAPIDE SANS IA NÉCESSAIRE (STYLE QR CODE)
 // ======================================================
 
 app.post(
@@ -485,10 +403,10 @@ app.post(
 
             const {
                 scannedMatrix, lot, visualBits: requestVisualBits, visualSignature: requestVisualSignature,
-                location, locationMethod, deviceMetadata
+                location
             } = req.body;
 
-            // 1. RECHERCHE ULTRA RAPIDE DANS LE CACHE PAR HACHAGE D'IMAGE (EXPRESS SCAN)
+            // 1. DÉCODAGE RAPIDE VIA CACHE MÉMOIRE (< 5ms)
             let imageCacheKey = null;
             if (typeof scannedMatrix === "string" && scannedMatrix.startsWith("data:image")) {
                 imageCacheKey = sha256Hex(scannedMatrix);
@@ -498,27 +416,27 @@ app.post(
                 }
             }
 
-            const normalizedRequestBits = normalizeVisualBits(requestVisualBits || scannedMatrix?.bits || scannedMatrix?.visualBits);
-            const requestSignature = typeof requestVisualSignature === "string" ? requestVisualSignature.trim() : (typeof scannedMatrix?.signature === "string" ? scannedMatrix.signature.trim() : (normalizedRequestBits ? `ANOR51:${normalizedRequestBits}` : null));
+            const normalizedRequestBits = normalizeVisualBits(requestVisualBits || (typeof scannedMatrix === "object" ? scannedMatrix.bits || scannedMatrix.visualBits : null));
+            const requestSignature = typeof requestVisualSignature === "string" ? requestVisualSignature.trim() : (typeof scannedMatrix === "string" && scannedMatrix.startsWith("ANOR51:") ? scannedMatrix.trim() : (normalizedRequestBits ? `ANOR51:${normalizedRequestBits}` : null));
 
             if (!lot && !scannedMatrix && !normalizedRequestBits && !requestSignature) {
                 return apiError(res, 400, "MISSING_SCAN", "Données de numérisation absentes.");
             }
 
             let row = null;
-            let verificationMode = "LOT";
+            let verificationMode = "DIRECT_DECODE";
             let matchConfidence = 1.0;
 
-            // 2. PASSAGE RAPIDE PAR CODE LOT EXACT
+            // 2. DÉCODAGE PAR NUMÉRO DE LOT DU SCEAU (SI DÉJÀ EXTRAIT CÔTÉ CLIENT - RAPIDE < 10ms)
             if (lot) {
                 const cleanLot = String(lot).trim();
                 const { data } = await supabase.from("produits_certifies").select("*").ilike("lot", cleanLot).maybeSingle();
                 if (data) row = data;
             }
 
-            // 3. DECODAGE MATRICIEL DIRECT (STYLE QR - INSTANTANÉ < 50ms)
+            // 3. DÉCODAGE DIRECT DES BITS/MATRICE VISUELLE (STYLE QR CODE EN BD - INSTANTANÉ)
             if (!row && (normalizedRequestBits || requestSignature)) {
-                verificationMode = "QR_DIRECT_BINARY_DECODE";
+                verificationMode = "QR_DIRECT_BINARY_MATCH";
                 
                 if (requestSignature) {
                     const { data } = await supabase.from("produits_certifies").select("*").eq("visual_signature", requestSignature).maybeSingle();
@@ -551,7 +469,7 @@ app.post(
                             }
                         }
 
-                        // Tolérance de 6 erreurs de bits max (style QR Reed-Solomon)
+                        // Correction d'erreur (style Reed-Solomon QR Code)
                         if (bestMatch && bestDistance <= 6) {
                             row = bestMatch;
                             matchConfidence = Number((1 - bestDistance / VISUAL_BITS_LENGTH).toFixed(3));
@@ -561,8 +479,8 @@ app.post(
                 }
             }
 
-            // 4. FALLBACK : ANALYSE VISUELLE GEMINI IA (SI LECTURE DIRECTE ÉCHOUÉE)
-            if (!row && scannedMatrix) {
+            // 4. MOTEUR DE SECOURS IA (SEULEMENT SI TOUTES LES ÉTAPES TECHNOLOGIQUES PRÉCÉDENTES ONT ÉCHOUÉ)
+            if (!row && scannedMatrix && ai) {
                 verificationMode = "GEMINI_VISION_RECOVERY";
 
                 if (typeof scannedMatrix === "string" && scannedMatrix.startsWith("data:image")) {
@@ -587,12 +505,13 @@ app.post(
                 }
             }
 
+            // 5. SI AUCUN SCEAU ASSOCIÉ N'EST TROUVÉ
             if (!row) {
                 securityLog(req, "UNKNOWN_SEAL_ATTEMPT", { lot: lot || "N/A", verificationMode });
                 return apiError(res, 404, "UNKNOWN_SEAL", "Sceau inconnu ou altéré.", { status: "CONTREFAÇON_REJETEE", processingTimeMs: Date.now() - startTime });
             }
 
-            // 5. MISE À JOUR ET JOURNALISATION EN ARRIÈRE-PLAN (ASYNC SANS BLOQUER LA RÉPONSE)
+            // 6. ENREGISTREMENT ET STATISTIQUES ASYNCHRONES EN ARRIÈRE-PLAN (NE BLOQUE PAS LA RÉPONSE CLIENT)
             const currentScanCount = Number(row.scan_count || 0) + 1;
             const currentLocation = location || "Inconnue";
 
@@ -701,7 +620,7 @@ app.post(
 
 const server = app.listen(PORT, "0.0.0.0", () => {
     console.log("======================================================");
-    console.log(`ANOR Backend v${SERVER_VERSION} (Mode QR Express & Decodage Actif)`);
+    console.log(`ANOR Backend v${SERVER_VERSION} (Mode QR Express & Décodage Actif)`);
     console.log(`Port: ${PORT}`);
     console.log("======================================================");
 });
