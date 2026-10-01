@@ -23,17 +23,11 @@ const { GoogleGenAI } = require("@google/genai");
 
 const app = express();
 
-// ======================================================
-// CONFIGURATION MULTER (UPLOAD DE FICHIERS)
-// ======================================================
 const upload = multer({
     storage: multer.memoryStorage(),
-    limits: { fileSize: 10 * 1024 * 1024 } // Limite à 10 Mo par fichier
+    limits: { fileSize: 10 * 1024 * 1024 }
 });
 
-// ======================================================
-// CONFIGURATION GEMINI IA
-// ======================================================
 let ai = null;
 if (process.env.GEMINI_API_KEY) {
     ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
@@ -42,11 +36,8 @@ if (process.env.GEMINI_API_KEY) {
     console.warn("[ANOR CORE] Avertissement : Clé GEMINI_API_KEY absente. Le module Vision IA sera inactif.");
 }
 
-// ======================================================
-// CACHE INTELLIGENT DE VISION FLASH (RÉPONSE EN < 1 SECONDE)
-// ======================================================
 const scanCache = new Map();
-const SCAN_CACHE_TTL = 15 * 60 * 1000; // 15 minutes
+const SCAN_CACHE_TTL = 15 * 60 * 1000;
 
 setInterval(() => {
     const now = Date.now();
@@ -57,26 +48,14 @@ setInterval(() => {
     }
 }, 60000);
 
-// ======================================================
-// VERSION / CONFIGURATION
-// ======================================================
-
 const SERVER_VERSION = "18.0.0";
 const VISUAL_VERSION = 2;
 const VISUAL_BITS_LENGTH = 51;
 const isProduction = process.env.NODE_ENV === "production";
 const PORT = process.env.PORT || 10000;
 
-// ======================================================
-// EXPRESS & TRUST PROXY
-// ======================================================
-
 app.set("trust proxy", 1);
 app.disable("x-powered-by");
-
-// ======================================================
-// UTILITAIRES DE SÉCURITÉ & NORMALISATION AVANCÉS
-// ======================================================
 
 function normalizeVisualBits(bits) {
     if (typeof bits === "string" && /^[01]{51}$/.test(bits)) {
@@ -105,11 +84,6 @@ function calculateHammingDistance(str1, str2) {
     return distance;
 }
 
-function sanitizeFileName(filename) {
-    if (!filename) return "unnamed_file";
-    return String(filename).replace(/[^a-zA-Z0-9._-]/g, "_");
-}
-
 function isValidUserAgent(agent) {
     if (!agent || typeof agent !== "string") return false;
     if (agent.length > 400 || agent.length === 0) return false;
@@ -120,10 +94,6 @@ function isValidUserAgent(agent) {
     }
     return true;
 }
-
-// ======================================================
-// FILTRAGE STRICT DES CHARGES UTILES (PAYLOAD SANITIZER)
-// ======================================================
 
 function deepSanitizeInput(obj) {
     if (obj && typeof obj === "object") {
@@ -144,10 +114,6 @@ app.use((req, res, next) => {
     }
     next();
 });
-
-// ======================================================
-// REPONSES API STANDARDISÉES
-// ======================================================
 
 function apiSuccess(res, data = {}, status = 200) {
     return res.status(status).json({
@@ -182,10 +148,6 @@ function securityLog(req, event, details = {}) {
     );
 }
 
-// ======================================================
-// CORS POLITIQUE SOUVERAINE
-// ======================================================
-
 const defaultAllowedOrigins = [
     "https://anorcheck.onrender.com",
     "https://anor-backend.onrender.com",
@@ -217,8 +179,6 @@ app.use(
             if (allowedOrigins.includes(origin)) return callback(null, true);
             if (origin.endsWith(".onrender.com")) return callback(null, true);
             if (!isProduction && isPrivateNetworkOrigin(origin)) return callback(null, true);
-            
-            console.warn(`[CORS] Origine refusée par la politique de sécurité: ${origin}`);
             return callback(new Error("CORS_ORIGIN_NOT_ALLOWED"));
         },
         credentials: true,
@@ -226,10 +186,6 @@ app.use(
         allowedHeaders: ["Content-Type", "Authorization", "X-API-Version", "X-Request-Id", "X-Anor-Signature"]
     })
 );
-
-// ======================================================
-// SÉCURITÉ HTTP (HELMET & CSP)
-// ======================================================
 
 app.use(helmet({ crossOriginEmbedderPolicy: false, contentSecurityPolicy: false }));
 app.use(express.json({ limit: "50mb" }));
@@ -245,10 +201,6 @@ app.use((req, res, next) => {
     res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
     next();
 });
-
-// ======================================================
-// REQUEST ID / LOGGING FORENSIC
-// ======================================================
 
 app.use((req, res, next) => {
     const startTime = Date.now();
@@ -268,61 +220,19 @@ app.use((req, res, next) => {
     next();
 });
 
-// ======================================================
-// RATE LIMITING DURCI
-// ======================================================
-
 const scanLimiter = rateLimit({
     windowMs: 60 * 1000,
-    max: 60, // Augmenté pour supporter le scanning continu haute fréquence style QR
+    max: 120,
     standardHeaders: true,
     legacyHeaders: false,
     handler: (req, res) => {
         securityLog(req, "RATE_LIMIT_EXCEEDED", { ip: req.ip });
         return res.status(429).json({
             success: false,
-            error: { code: "TROP_DE_REQUETES", message: "Flux de numérisation trop élevé. Veuillez réessayer dans quelques secondes." }
+            error: { code: "TROP_DE_REQUETES", message: "Flux de numérisation trop élevé. Veuillez réessayer." }
         });
     }
 });
-
-// ======================================================
-// ANALYSE INTEL-QR & GEMINI VISION
-// ======================================================
-
-async function intelligentVisualAnalysis(scannedMatrix) {
-    if (!scannedMatrix) return { lot: null, signature: null, bits: null, confidence: 0 };
-
-    if (typeof scannedMatrix === "string") {
-        const trimmed = scannedMatrix.trim();
-        if (!trimmed) return { lot: null, signature: null, bits: null, confidence: 0 };
-
-        if (trimmed.startsWith("ANOR51:")) {
-            const bits = normalizeVisualBits(trimmed.substring(7));
-            if (bits) return { lot: null, signature: trimmed, bits, confidence: 0.99 };
-        }
-
-        const directBits = normalizeVisualBits(trimmed);
-        if (directBits) {
-            return { lot: null, signature: `ANOR51:${directBits}`, bits: directBits, confidence: 0.99 };
-        }
-
-        if (trimmed.length < 50) {
-            return { lot: trimmed, signature: null, bits: null, confidence: 0.95 };
-        }
-
-        return { lot: null, signature: trimmed, bits: null, confidence: 0.50 };
-    }
-
-    if (typeof scannedMatrix === "object") {
-        const bits = normalizeVisualBits(scannedMatrix.bits || scannedMatrix.visualBits);
-        const signature = scannedMatrix.signature || scannedMatrix.visualSignature || null;
-        const lot = scannedMatrix.lot || scannedMatrix.batch || scannedMatrix.certificate_code || null;
-        return { lot, signature, bits, confidence: bits ? 0.99 : lot ? 0.95 : 0.40 };
-    }
-
-    return { lot: null, signature: null, bits: null, confidence: 0 };
-}
 
 async function analyzeSealWithGemini(imageBuffer, mimeType = "image/jpeg") {
     try {
@@ -339,7 +249,7 @@ async function analyzeSealWithGemini(imageBuffer, mimeType = "image/jpeg") {
             model: "gemini-3.6-flash", 
             contents: [
                 imagePart,
-                "Sceau de certification ANOR. Décode le numéro de lot (ex: LOT 54P-2026 ou LOT DEMO) et la référence. Réponds STRICTEMENT en JSON : {\"lot\": string|null, \"reference\": string|null, \"confidence\": number}."
+                "Sceau de certification ANOR. Décode le numéro de lot (ex: LOT 01U-2026 ou LOT DEMO) et la référence. Réponds STRICTEMENT en JSON : {\"lot\": string|null, \"reference\": string|null, \"confidence\": number}."
             ],
         });  
 
@@ -352,53 +262,6 @@ async function analyzeSealWithGemini(imageBuffer, mimeType = "image/jpeg") {
     }
 }
 
-// ======================================================
-// GENERATION DU MANIFESTE INDUSTRIEL
-// ======================================================
-
-async function generateUnitSerialsAndManifest(lotCode, totalQuantity, masterSignature) {
-    const batchSize = 5000;
-    let csvContent = "Index,Numero_De_Serie,Hachage_Securise\n";
-    const unitsToInsert = [];
-
-    for (let i = 1; i <= totalQuantity; i++) {
-        const paddedIndex = String(i).padStart(6, "0");
-        const serialNumber = `${lotCode}-${paddedIndex}`;
-        
-        const secureUnitHash = crypto
-            .createHash("sha256")
-            .update(`${masterSignature}-${serialNumber}-${i}`)
-            .digest("hex");
-
-        unitsToInsert.push({
-            lot: lotCode,
-            serial_number: serialNumber,
-            unit_index: i,
-            secure_unit_hash: secureUnitHash,
-            statut_unitaire: "ACTIF"
-        });
-
-        csvContent += `${i},${serialNumber},${secureUnitHash}\n`;
-
-        if (unitsToInsert.length >= batchSize || i === totalQuantity) {
-            const { error } = await supabase
-                .from("produits_unitaires_serials")
-                .upsert(unitsToInsert, { onConflict: "serial_number" });
-
-            if (error) {
-                console.error(`[SERIALIZATION ERROR] Erreur sur le bloc se terminant à l'index ${i}:`, error.message);
-                throw error;
-            }
-            unitsToInsert.length = 0;
-        }
-    }
-    return csvContent;
-}
-
-// ======================================================
-// FICHIERS STATIQUES & ROUTES
-// ======================================================
-
 app.use(express.static(path.join(__dirname)));
 app.use("/dashboard", express.static(path.join(__dirname, "dashboard")));
 app.use("/product_audit", express.static(path.join(__dirname, "product_audit")));
@@ -409,10 +272,6 @@ app.use("/forge", express.static(path.join(__dirname, "forge")));
 app.get(["/", "/index.html"], (req, res) => {
     res.redirect("/dashboard/index.html");
 });
-
-// ======================================================
-// HEALTH CHECK & STATS
-// ======================================================
 
 app.get("/health", async (req, res) => {
     let database = "DOWN";
@@ -471,7 +330,7 @@ app.get("/api/dashboard/stats", async (req, res) => {
 });
 
 // ======================================================
-// VERIFICATION DU SCEAU MODE LECTURE RAPIDE STYLE QR
+// VERIFICATION DU SCEAU (MODE MATRICIEL DIRECT ULTRA-RAPIDE OU VISION)
 // ======================================================
 
 app.post(
@@ -489,7 +348,7 @@ app.post(
                 location, locationMethod, deviceMetadata
             } = req.body;
 
-            // 1. RECHERCHE ULTRA RAPIDE DANS LE CACHE PAR HACHAGE D'IMAGE (EXPRESS SCAN)
+            // Cache par hachage direct
             let imageCacheKey = null;
             if (typeof scannedMatrix === "string" && scannedMatrix.startsWith("data:image")) {
                 imageCacheKey = sha256Hex(scannedMatrix);
@@ -499,8 +358,8 @@ app.post(
                 }
             }
 
-            const normalizedRequestBits = normalizeVisualBits(requestVisualBits || scannedMatrix?.bits || scannedMatrix?.visualBits);
-            const requestSignature = typeof requestVisualSignature === "string" ? requestVisualSignature.trim() : (typeof scannedMatrix?.signature === "string" ? scannedMatrix.signature.trim() : (normalizedRequestBits ? `ANOR51:${normalizedRequestBits}` : null));
+            const normalizedRequestBits = normalizeVisualBits(requestVisualBits || (typeof scannedMatrix === "object" ? scannedMatrix.bits : null));
+            const requestSignature = typeof requestVisualSignature === "string" ? requestVisualSignature.trim() : (normalizedRequestBits ? `ANOR51:${normalizedRequestBits}` : null);
 
             if (!lot && !scannedMatrix && !normalizedRequestBits && !requestSignature) {
                 return apiError(res, 400, "MISSING_SCAN", "Données de numérisation absentes.");
@@ -510,14 +369,14 @@ app.post(
             let verificationMode = "LOT";
             let matchConfidence = 1.0;
 
-            // 2. PASSAGE RAPIDE PAR CODE LOT EXACT
+            // 1. Recherche directe par code Lot
             if (lot) {
                 const cleanLot = String(lot).trim();
                 const { data } = await supabase.from("produits_certifies").select("*").ilike("lot", cleanLot).maybeSingle();
                 if (data) row = data;
             }
 
-            // 3. DECODAGE MATRICIEL DIRECT (STYLE QR - INSTANTANÉ < 50ms)
+            // 2. Décodage matriciel pur direct (style QR sans IA - ultra rapide < 20ms)
             if (!row && (normalizedRequestBits || requestSignature)) {
                 verificationMode = "QR_DIRECT_BINARY_DECODE";
                 
@@ -552,7 +411,6 @@ app.post(
                             }
                         }
 
-                        // Tolérance de 6 erreurs de bits max (style QR Reed-Solomon)
                         if (bestMatch && bestDistance <= 6) {
                             row = bestMatch;
                             matchConfidence = Number((1 - bestDistance / VISUAL_BITS_LENGTH).toFixed(3));
@@ -562,27 +420,25 @@ app.post(
                 }
             }
 
-            // 4. FALLBACK : ANALYSE VISUELLE GEMINI IA (SI LECTURE DIRECTE ÉCHOUÉE)
-            if (!row && scannedMatrix) {
+            // 3. Fallback Gemini IA si le décodage matriciel échoue
+            if (!row && scannedMatrix && typeof scannedMatrix === "string" && scannedMatrix.startsWith("data:image")) {
                 verificationMode = "GEMINI_VISION_RECOVERY";
 
-                if (typeof scannedMatrix === "string" && scannedMatrix.startsWith("data:image")) {
-                    const matches = scannedMatrix.match(/^data:(.+);base64,(.+)$/);
-                    if (matches) {
-                        const bufferData = Buffer.from(matches[2], "base64");
-                        const geminiResult = await analyzeSealWithGemini(bufferData, matches[1]);
-                        
-                        if (geminiResult && geminiResult.lot) {
-                            const { data } = await supabase
-                                .from("produits_certifies")
-                                .select("*")
-                                .ilike("lot", String(geminiResult.lot).trim())
-                                .maybeSingle();
+                const matches = scannedMatrix.match(/^data:(.+);base64,(.+)$/);
+                if (matches) {
+                    const bufferData = Buffer.from(matches[2], "base64");
+                    const geminiResult = await analyzeSealWithGemini(bufferData, matches[1]);
+                    
+                    if (geminiResult && geminiResult.lot) {
+                        const { data } = await supabase
+                            .from("produits_certifies")
+                            .select("*")
+                            .ilike("lot", String(geminiResult.lot).trim())
+                            .maybeSingle();
 
-                            if (data) {
-                                row = data;
-                                matchConfidence = geminiResult.confidence || 0.95;
-                            }
+                        if (data) {
+                            row = data;
+                            matchConfidence = geminiResult.confidence || 0.95;
                         }
                     }
                 }
@@ -593,7 +449,6 @@ app.post(
                 return apiError(res, 404, "UNKNOWN_SEAL", "Sceau inconnu ou altéré.", { status: "CONTREFAÇON_REJETEE", processingTimeMs: Date.now() - startTime });
             }
 
-            // 5. MISE À JOUR ET JOURNALISATION EN ARRIÈRE-PLAN (ASYNC SANS BLOQUER LA RÉPONSE)
             const currentScanCount = Number(row.scan_count || 0) + 1;
             const currentLocation = location || "Inconnue";
 
@@ -637,10 +492,6 @@ app.post(
         }
     }
 );
-
-// ======================================================
-// GENERATION BATCH SEAL
-// ======================================================
 
 app.post(
     "/api/seals/generate-batch-seal",
@@ -695,10 +546,6 @@ app.post(
         }
     }
 );
-
-// ======================================================
-// DEMARRAGE SERVEUR
-// ======================================================
 
 const server = app.listen(PORT, "0.0.0.0", () => {
     console.log("======================================================");

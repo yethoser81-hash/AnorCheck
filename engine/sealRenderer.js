@@ -38,7 +38,7 @@ const sealRenderer = {
         return null;
     },
 
-   resolveProtocolGlyph(visibleIndex) {
+    resolveProtocolGlyph(visibleIndex) {
         if (GlyphsLibrary && typeof GlyphsLibrary.resolveGlyph === 'function') {
             return GlyphsLibrary.resolveGlyph(visibleIndex);
         }
@@ -69,16 +69,11 @@ const sealRenderer = {
         };
     },
 
-    /**
-     * LOGIQUE QR CODE : 3 MIRES DE DÉTECTION (HAUT, GAUCHE, DROITE).
-     * Rompt la symétrie radiale pour fixer immédiatement le HAUT du sceau.
-     */
     getFinderAngles() {
         return [
             0,             // Droite (0 rad)
             Math.PI / 2,   // Haut (PI/2 rad)
             Math.PI        // Gauche (PI rad)
-            // La mire du Bas (3*PI/2) est supprimée pour briser la symétrie !
         ];
     },
 
@@ -111,7 +106,7 @@ const sealRenderer = {
             positions.push({ ring: 'middle', ringPosition: i, theoreticalCount: 24 });
         }
 
-        // Anneau externe : 20 glyphes (alignés hors des 3 mires)
+        // Anneau externe : 20 glyphes
         for (let i = 0; i < 32; i++) {
             const angle = (i / 32) * Math.PI * 2;
             if (this.isOuterFinderCollision(angle)) continue;
@@ -156,7 +151,7 @@ const sealRenderer = {
         const suppliedVisualBits = payload.visualBits;
         const visualBits = this.normalizeVisualBits(suppliedVisualBits) || this.deriveVisualBits(secureSignature || rawBatchName);
 
-        // 3. CERCLE EXTÉRIEUR & ANNEAU DE SYNCHRONISATION (TIMING PATTERN)
+        // 3. CERCLE EXTÉRIEUR & ANNEAU DE SYNCHRONISATION
         ctx.save();
         ctx.strokeStyle = GEOMETRY_COLOR;
         ctx.lineWidth = 6;
@@ -164,7 +159,6 @@ const sealRenderer = {
         ctx.arc(centerX, centerY, outerRadius, 0, Math.PI * 2);
         ctx.stroke();
 
-        // Ligne de synchronisation pointillée pour le calage d'échantillonnage
         ctx.lineWidth = 2;
         ctx.setLineDash([6, 6]);
         ctx.beginPath();
@@ -215,7 +209,7 @@ const sealRenderer = {
         }
         ctx.restore();
 
-        // 6. LES 3 MIRES CARDINALES ASYMÉTRIQUES (TYPE QR CODE FINDER PATTERNS)
+        // 6. LES 3 MIRES CARDINALES ASYMÉTRIQUES
         const finderSize = Math.max(30, Math.round((outerRadius / CANONICAL_OUTER_RADIUS) * 44));
         const finderCore = Math.max(12, Math.round(finderSize * 0.40));
 
